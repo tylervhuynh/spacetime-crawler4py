@@ -25,8 +25,9 @@ def extract_next_links(url, resp):
         links = soup.find_all('a')
         for link in links:
             href = link.get('href')
-            full_url = urljoin(resp.url, href)
-            extracted_links.append(full_url)
+            if href:
+                full_url = urljoin(resp.url, href)
+                extracted_links.append(full_url)
     except Exception as e:
         print("Error occurred while extracting a specific link:", e)
     return extracted_links
@@ -39,6 +40,14 @@ def is_valid(url):
         parsed = urlparse(url)
         if parsed.scheme not in set(["http", "https"]):
             return False
+
+        valid_domains = {"ics.uci.edu", "cs.uci.edu", "informatics.uci.edu",
+                         "stat.uci.edu", "today.uci.edu"}
+        if parsed.netloc not in valid_domains:
+            if parsed.netloc == "today.uci.edu" and parsed.path.startswith("/department/information_computer_sciences/"):
+                return True
+            return False
+
         return not re.match(
             r".*\.(css|js|bmp|gif|jpe?g|ico"
             + r"|png|tiff?|mid|mp2|mp3|mp4"
