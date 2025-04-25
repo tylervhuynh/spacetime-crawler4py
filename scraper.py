@@ -17,15 +17,18 @@ def extract_next_links(url, resp):
     #         resp.raw_response.content: the content of the page!
     # Return a list with the hyperlinks (as strings) scrapped from resp.raw_response.content
     if resp.status != 200:
-        print("Error occurred while extracting links:", resp.error)
+        print("Error occurred while extracting links from url:", resp.error)
         return list()
     extracted_links = []
-    soup = BeautifulSoup(resp.raw_response.content, 'lxml')
-    links = soup.find_all('a')
-    for link in links:
-        href = link.get('href')
-        full_url = urljoin(resp.url, href)
-        extracted_links.append(full_url)
+    try:
+        soup = BeautifulSoup(resp.raw_response.content, 'lxml')
+        links = soup.find_all('a')
+        for link in links:
+            href = link.get('href')
+            full_url = urljoin(resp.url, href)
+            extracted_links.append(full_url)
+    except Exception as e:
+        print("Error occurred while extracting a specific link:", e)
     return extracted_links
 
 def is_valid(url):
