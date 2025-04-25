@@ -43,7 +43,7 @@ def is_valid(url):
 
         valid_domains = {"ics.uci.edu", "cs.uci.edu", "informatics.uci.edu",
                          "stat.uci.edu", "today.uci.edu"}
-        if parsed.netloc.equals("today.uci.edu") and not parsed.path.startswith("/department/information_computer_sciences/"):
+        if parsed.netloc == "today.uci.edu" and not parsed.path.startswith("/department/information_computer_sciences/"):
             return False
         if parsed.netloc not in valid_domains:
             return False
