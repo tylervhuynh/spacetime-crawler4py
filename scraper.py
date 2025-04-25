@@ -1,5 +1,5 @@
 import re
-from urllib.parse import urlparse, urljoin
+from urllib.parse import urlparse, urljoin, urldefrag
 from bs4 import BeautifulSoup
 
 def scraper(url, resp):
@@ -27,6 +27,7 @@ def extract_next_links(url, resp):
             href = link.get('href')
             if href:
                 full_url = urljoin(resp.url, href)
+                full_url, _ = urldefrag(full_url)
                 extracted_links.append(full_url)
     except Exception as e:
         print("Error occurred while extracting a specific link:", e)
@@ -43,9 +44,9 @@ def is_valid(url):
 
         valid_domains = {"ics.uci.edu", "cs.uci.edu", "informatics.uci.edu",
                          "stat.uci.edu", "today.uci.edu"}
-        if parsed.netloc == "today.uci.edu" and not parsed.path.startswith("/department/information_computer_sciences/"):
+        if "today.uci.edu" in parsed.netloc and not parsed.path.startswith("/department/information_computer_sciences/"):
             return False
-        if parsed.netloc not in valid_domains:
+        if not any(domain in parsed.netloc for domain in valid_domains):
             return False
 
         return not re.match(
