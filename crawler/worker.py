@@ -20,6 +20,8 @@ class Worker(Thread):
     def run(self):
         unique_pages = set()
         subdomains = {}
+        text_cache = set()
+        token_cache = []
         while True:
             tbd_url = self.frontier.get_tbd_url()
             if not tbd_url:
@@ -29,7 +31,7 @@ class Worker(Thread):
             self.logger.info(
                 f"Downloaded {tbd_url}, status <{resp.status}>, "
                 f"using cache {self.config.cache_server}.")
-            scraped_urls = scraper.scraper(tbd_url, resp, unique_pages, subdomains)
+            scraped_urls = scraper.scraper(tbd_url, resp, unique_pages, subdomains, text_cache, token_cache)
             for scraped_url in scraped_urls:
                 self.frontier.add_url(scraped_url)
             self.frontier.mark_url_complete(tbd_url)

@@ -2,31 +2,59 @@ import re
 from urllib.parse import urlparse, urljoin, urldefrag
 from bs4 import BeautifulSoup
 
-def scraper(url, resp, unique_pages, subdomains):
+
+def scraper(url, resp, unique_pages, subdomains, text_cache, token_cache):
     valid_links = []
     links = extract_next_links(url, resp)
     for link in links:
+        # Avoids crawler traps by ensuring links are unique
         num_pages = len(unique_pages)  # Gets number of unique pages found so far
         unique_pages.add(link)      # Adds unique page to a set
+        if num_pages + 1 != len(unique_pages): # If page is not unique, skip it
+            continue
 
         if is_valid(link):
-            parsed = urlparse(link)     # Parses link
-            if num_pages + 1 != len(unique_pages): # If page is not unique, skip it
-                continue
+            parsed = urlparse(link) # Parses link
 
+            # Tracks subdomains and their number of pages
             if parsed.netloc in subdomains:
                 subdomains[parsed.netloc] += 1
             else:
                 subdomains[parsed.netloc] = 1
-            with open("urlcontents.txt", 'a', encoding='UTF-8') as file:
-                file.write("URL #" + str((len(unique_pages) + 1)) + ": " + link)
-                soup = BeautifulSoup(resp.raw_response.content, 'lxml')
-                paragraphs = soup.find_all('p')
-                for paragraph in paragraphs:
-                    file.write('\n' + paragraph.text + '\n')
-                file.write("\nTYLERHUYNHSEPERATOR\n")
+
+            # Filtering for low/high information (<10 words or >1000000)
+            soup = BeautifulSoup(resp.raw_response.content, 'lxml')
+            for tag in soup.find_all(['script', 'style', 'noscript', 'header', 'footer']):
+                tag.decompose()
+            text = soup.get_text(separator=' ', strip=True)
+            words = text.lower().split()
+            word_count = len(words)
+            if word_count < 10 or word_count > 100000:
+                continue
 
             valid_links.append(link)
+
+            # Filters exact duplicates
+            if text not in text_cache:
+                text_cache.add(text)
+                if len(text_cache) > 100: # Limit cache size
+                    text_cache.pop()
+            else:
+                continue
+
+            # Filters near duplicates
+            frequencies = compute_word_frequencies(words)
+            if is_near_duplicate(frequencies, token_cache):
+                continue  # Too similar to a recent page
+            token_cache.append(frequencies)
+            if len(token_cache) > 100: # Limit cache size
+                token_cache.pop(0)
+
+            # Logging information
+            with open("urlcontents.txt", 'a', encoding='UTF-8') as file:
+                file.write("URL #" + str((len(unique_pages) + 1)) + ": " + link)
+                file.write('\n' + text + '\n')
+                file.write("\nTYLERHUYNHSEPERATOR\n")
 
     print("Number of Unique Pages Found:", len(unique_pages))
     print("Number of Unique Pages Found for Each Subdomain:", subdomains)
@@ -68,15 +96,17 @@ def is_valid(url):
         if parsed.scheme not in set(["http", "https"]):
             return False
 
+        # Only allows valid domains
         valid_domains = {"ics.uci.edu", "cs.uci.edu", "informatics.uci.edu",
                          "stat.uci.edu", "today.uci.edu"}
         if "today.uci.edu" in parsed.netloc and not parsed.path.startswith("/department/information_computer_sciences/"):
             return False
         if not any(domain in parsed.netloc for domain in valid_domains):
             return False
-        
-        if ("calender" in parsed.path or "/events" in parsed.path or "/month" in parsed.path or 
-            "/day" in parsed.path or "/event" in parsed.path):
+
+        # Avoids calendar, and date traps
+        if ("calendar" in parsed.path or "/month" in parsed.path or 
+            "/day" in parsed.path):
                 return False
 
         return not re.match(
@@ -92,3 +122,40 @@ def is_valid(url):
     except TypeError:
         print ("TypeError for ", parsed)
         raise
+
+def is_near_duplicate(frequencies, token_cache):
+    for cached_dictionary in token_cache:
+        intersections = number_of_intersections(frequencies, cached_dictionary)
+        min_length = min(len(frequencies), len(cached_dictionary))
+        if min_length == 0:
+            continue  # Avoids division by zero
+        similarity = intersections / min_length
+        if similarity >= 0.9:
+            return True
+    return False
+
+# From Assignment 1: Text Processing
+def compute_word_frequencies(tokens: list) -> dict:
+    frequencies = {}
+    for token in tokens:
+        if token not in frequencies:
+            frequencies[token] = 1 # Adds token to frequencies dictionary
+        else:
+            frequencies[token] += 1 # Increments token's frequency in dictionary
+    return frequencies
+
+def number_of_intersections(frequencies1: dict, frequencies2: dict):
+    # First picks smaller dictionary to traverse with, all O(1) instructions
+    if len(frequencies1) <= len(frequencies2):
+        smaller_frequencies = frequencies1
+        larger_frequencies = frequencies2
+    else:
+        smaller_frequencies = frequencies2
+        larger_frequencies = frequencies1
+
+    # Traverses one dictionary, seeking intersections, O(N)
+    counter = 0
+    for token in smaller_frequencies.keys():
+        if token in larger_frequencies:
+            counter += 1
+    return counter
