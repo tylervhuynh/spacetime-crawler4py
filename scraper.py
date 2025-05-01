@@ -2,9 +2,35 @@ import re
 from urllib.parse import urlparse, urljoin, urldefrag
 from bs4 import BeautifulSoup
 
-def scraper(url, resp):
+def scraper(url, resp, unique_pages, subdomains):
+    valid_links = []
     links = extract_next_links(url, resp)
-    return [link for link in links if is_valid(link)]
+    for link in links:
+        num_pages = len(unique_pages)  # Gets number of unique pages found so far
+        unique_pages.add(link)      # Adds unique page to a set
+
+        if is_valid(link):
+            parsed = urlparse(link)     # Parses link
+            if num_pages + 1 != len(unique_pages): # If page is not unique, skip it
+                continue
+
+            if parsed.netloc in subdomains:
+                subdomains[parsed.netloc] += 1
+            else:
+                subdomains[parsed.netloc] = 1
+            with open("urlcontents.txt", 'a', encoding='UTF-8') as file:
+                file.write("URL #" + str((len(unique_pages) + 1)) + ": " + link)
+                soup = BeautifulSoup(resp.raw_response.content, 'lxml')
+                paragraphs = soup.find_all('p')
+                for paragraph in paragraphs:
+                    file.write('\n' + paragraph.text + '\n')
+                file.write("\nTYLERHUYNHSEPERATOR\n")
+
+            valid_links.append(link)
+
+    print("Number of Unique Pages Found:", len(unique_pages))
+    print("Number of Unique Pages Found for Each Subdomain:", subdomains)
+    return valid_links # ORIGINAL: [link for link in links if is_valid(link)]
 
 def extract_next_links(url, resp):
     # Implementation required.
@@ -48,11 +74,15 @@ def is_valid(url):
             return False
         if not any(domain in parsed.netloc for domain in valid_domains):
             return False
+        
+        if ("calender" in parsed.path or "/events" in parsed.path or "/month" in parsed.path or 
+            "/day" in parsed.path or "/event" in parsed.path):
+                return False
 
         return not re.match(
             r".*\.(css|js|bmp|gif|jpe?g|ico"
             + r"|png|tiff?|mid|mp2|mp3|mp4"
-            + r"|wav|avi|mov|mpeg|ram|m4v|mkv|ogg|ogv|pdf"
+            + r"|wav|avi|mov|mpeg|ram|m4v|mkv|ogg|ogv|pdf|jpg|jpeg"
             + r"|ps|eps|tex|ppt|pptx|doc|docx|xls|xlsx|names"
             + r"|data|dat|exe|bz2|tar|msi|bin|7z|psd|dmg|iso"
             + r"|epub|dll|cnf|tgz|sha1"
