@@ -58,6 +58,16 @@ def scraper(url, resp, unique_pages, subdomains, text_cache, token_cache):
 
     print("Number of Unique Pages Found:", len(unique_pages))
     print("Number of Unique Pages Found for Each Subdomain:", subdomains)
+    with open("pages.txt", 'w', encoding='UTF-8') as file:
+        file.write("Number of Unique Pages Found:" + str(len(unique_pages)) + '\n')
+        file.write("Number of Unique Pages Found for Each Subdomain:\n")
+        for subdomain in subdomains:
+            file.write(subdomain + " " + str(subdomains[subdomain]) + "\n")
+        file.write("\n\nThe unique pages found were:\n")
+        counter = 1
+        for page_link in unique_pages:
+            file.write("URL #" + str(counter) + ": " + page_link + "\n")
+            counter += 1
     return valid_links # ORIGINAL: [link for link in links if is_valid(link)]
 
 def extract_next_links(url, resp):

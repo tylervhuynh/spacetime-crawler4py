@@ -36,13 +36,3 @@ class Worker(Thread):
                 self.frontier.add_url(scraped_url)
             self.frontier.mark_url_complete(tbd_url)
             time.sleep(self.config.time_delay)
-        with open("pages.txt", 'a', encoding='UTF-8') as file:
-            file.write("Number of Unique Pages Found:" + str(len(unique_pages)) + '\n')
-            file.write("Number of Unique Pages Found for Each Subdomain:\n")
-            for subdomain in subdomains:
-                file.write(subdomain + " " + str(subdomains[subdomain]) + "\n")
-            file.write("\n\nThe unique pages found were:\n")
-            counter = 0
-            for page_link in unique_pages:
-                file.write("URL #" + str(counter) + ": " + page_link + "\n")
-                counter += 1
