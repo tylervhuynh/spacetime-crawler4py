@@ -56,14 +56,12 @@ def scraper(url, resp, unique_pages, subdomains, text_cache, token_cache):
                 file.write('\n' + text + '\n')
                 file.write("\nTYLERHUYNHSEPERATOR\n")
 
-    print("Number of Unique Pages Found:", len(unique_pages))
-    print("Number of Unique Pages Found for Each Subdomain:", subdomains)
     with open("pages.txt", 'w', encoding='UTF-8') as file:
-        file.write("Number of Unique Pages Found:" + str(len(unique_pages)) + '\n')
+        file.write("Number of Unique Pages Found: " + str(len(unique_pages)) + '\n\n')
         file.write("Number of Unique Pages Found for Each Subdomain:\n")
         for subdomain in subdomains:
             file.write(subdomain + " " + str(subdomains[subdomain]) + "\n")
-        file.write("\n\nThe unique pages found were:\n")
+        file.write("\nThe unique pages found were:\n")
         counter = 1
         for page_link in unique_pages:
             file.write("URL #" + str(counter) + ": " + page_link + "\n")
@@ -116,7 +114,7 @@ def is_valid(url):
 
         # Avoids calendar, and date traps
         if ("calendar" in parsed.path or "/month" in parsed.path or 
-            "/day" in parsed.path):
+            "/day" in parsed.path or "/events" in parsed.path):
                 return False
 
         return not re.match(
