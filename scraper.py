@@ -114,7 +114,8 @@ def is_valid(url):
 
         # Avoids calendar, and date traps
         if ("calendar" in parsed.path or "/month" in parsed.path or 
-            "/day" in parsed.path or "/events" in parsed.path):
+            "/day" in parsed.path or "/events" in parsed.path or 
+            "/doku.php" in parsed.path):
                 return False
 
         return not re.match(
