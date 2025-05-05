@@ -3,7 +3,7 @@ from urllib.parse import urlparse, urljoin, urldefrag
 from bs4 import BeautifulSoup
 
 
-def scraper(url, resp, unique_pages, subdomains, text_cache, token_cache):
+def scraper(url, resp, unique_pages, subdomains, text_cache, token_cache, max_word_count, common_frequencies):
     valid_links = []
     links = extract_next_links(url, resp)
     for link in links:
@@ -37,7 +37,7 @@ def scraper(url, resp, unique_pages, subdomains, text_cache, token_cache):
             # Filters exact duplicates
             if text not in text_cache:
                 text_cache.add(text)
-                if len(text_cache) > 100: # Limit cache size
+                if len(text_cache) > 50: # Limit cache size
                     text_cache.pop()
             else:
                 continue
@@ -47,8 +47,34 @@ def scraper(url, resp, unique_pages, subdomains, text_cache, token_cache):
             if is_near_duplicate(frequencies, token_cache):
                 continue  # Too similar to a recent page
             token_cache.append(frequencies)
-            if len(token_cache) > 100: # Limit cache size
+            if len(token_cache) > 50: # Limit cache size
                 token_cache.pop(0)
+
+            # Updates most frequently used words (excluding stop words from the website provided)
+            stop_words = {'a', 'about', 'above', 'after', 'again', 'against', 'all', 'am', 'an', 'and', 'any', 'are', "aren't", 'as', 'at',
+                'be', 'because', 'been', 'before', 'being', 'below', 'between', 'both', 'but', 'by', "can't", 'cannot', 'could',
+                "couldn't", 'did', "didn't", 'do', 'does', "doesn't", 'doing', "don't", 'down', 'during', 'each', 'few', 'for',
+                'from', 'further', 'had', "hadn't", 'has', "hasn't", 'have', "haven't", 'having', 'he', "he'd", "he'll", "he's",
+                'her', 'here', "here's", 'hers', 'herself', 'him', 'himself', 'his', 'how', "how's", 'i', "i'd", "i'll", "i'm",
+                "i've", 'if', 'in', 'into', 'is', "isn't", 'it', "it's", 'its', 'itself', "let's", 'me', 'more', 'most', "mustn't",
+                'my', 'myself', 'no', 'nor', 'not', 'of', 'off', 'on', 'once', 'only', 'or', 'other', 'ought', 'our', 'ours',
+                'ourselves', 'out', 'over', 'own', 'same', "shan't", 'she', "she'd", "she'll", "she's", 'should', "shouldn't", 'so',
+                'some', 'such', 'than', 'that', "that's", 'the', 'their', 'theirs', 'them', 'themselves', 'then', 'there', "there's",
+                'these', 'they', "they'd", "they'll", "they're", "they've", 'this', 'those', 'through', 'to', 'too', 'under', 'until',
+                'up', 'very', 'was', "wasn't", 'we', "we'd", "we'll", "we're", "we've", 'were', "weren't", 'what', "what's", 'when',
+                "when's", 'where', "where's", 'which', 'while', 'who', "who's", 'whom', 'why', "why's", 'with', "won't", 'would',
+                "wouldn't", 'you', "you'd", "you'll", "you're", "you've", 'your', 'yours', 'yourself', 'yourselves'}
+            for word, count in frequencies.items():
+                if word not in stop_words:
+                    if word in common_frequencies:
+                        common_frequencies[word] += count
+                    else:
+                        common_frequencies[word] = count
+            
+            # Updates max word count tracker
+            if word_count > max_word_count[0][0]:
+                max_word_count.pop()
+                max_word_count.append((word_count, link))
 
             # Logging information
             with open("urlcontents.txt", 'a', encoding='UTF-8') as file:
@@ -58,15 +84,28 @@ def scraper(url, resp, unique_pages, subdomains, text_cache, token_cache):
 
     with open("pages.txt", 'w', encoding='UTF-8') as file:
         file.write("Number of Unique Pages Found: " + str(len(unique_pages)) + '\n\n')
+
+        file.write("\nLongest Page (by word count):\n")
+        file.write(f"URL: {max_word_count[0][1]}\n")
+        file.write(f"Word Count: {max_word_count[0][0]}\n")
+
+        most_common_words = sorted(common_frequencies.items(), key=lambda x: x[1], reverse=True)[:50]
+        file.write("\n50 Most Common Words (excluding stop words):\n")
+        for word, count in most_common_words:
+            file.write(f"{word}: {count}\n")
+
         file.write("Number of Unique Pages Found for Each Subdomain:\n")
-        for subdomain in subdomains:
+        sorted_subdomains = sorted(subdomains.keys())
+        for subdomain in sorted_subdomains:
             file.write(subdomain + " " + str(subdomains[subdomain]) + "\n")
+
         file.write("\nThe unique pages found were:\n")
         counter = 1
         for page_link in unique_pages:
             file.write("URL #" + str(counter) + ": " + page_link + "\n")
             counter += 1
-    return valid_links # ORIGINAL: [link for link in links if is_valid(link)]
+
+    return valid_links
 
 def extract_next_links(url, resp):
     # Implementation required.
@@ -119,7 +158,7 @@ def is_valid(url):
                 return False
 
         return not re.match(
-            r".*\.(css|js|bmp|gif|jpe?g|ico"
+            r".*\.(css|js|bmp|gif|jpe?g|ico|py"
             + r"|png|tiff?|mid|mp2|mp3|mp4"
             + r"|wav|avi|mov|mpeg|ram|m4v|mkv|ogg|ogv|pdf|jpg|jpeg"
             + r"|ps|eps|tex|ppt|pptx|doc|docx|xls|xlsx|names"
