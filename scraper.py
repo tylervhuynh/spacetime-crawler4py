@@ -85,7 +85,7 @@ def scraper(url, resp, unique_pages, subdomains, text_cache, token_cache, max_wo
     with open("pages.txt", 'w', encoding='UTF-8') as file:
         file.write("Number of Unique Pages Found: " + str(len(unique_pages)) + '\n\n')
 
-        file.write("\nLongest Page (by word count):\n")
+        file.write("Longest Page (by word count):\n")
         file.write(f"URL: {max_word_count[0][1]}\n")
         file.write(f"Word Count: {max_word_count[0][0]}\n")
 
